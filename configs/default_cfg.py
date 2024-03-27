@@ -1,4 +1,4 @@
-IS_OFFICE = True
+IS_OFFICE = False
 
 default_cfg = {
     'IS_OFFICE': IS_OFFICE,
