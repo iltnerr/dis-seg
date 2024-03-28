@@ -11,6 +11,7 @@ from transformers import SegformerImageProcessor, SegformerForSemanticSegmentati
 from utils.common import common_paths
 from utils.misc import initialize_session, save_checkpoint, log_metrics, log_train_config, delete_old_checkpoint
 from utils.visualization import plot_curves
+from utils.early_stopper import EarlyStopper
 from configs.default_cfg import default_cfg
 from dataset.dataset_utils import cls_dict, get_transforms
 from dataset.disaster_dataset import DisasterSegDataset
@@ -67,11 +68,13 @@ def main():
     )  
     model.to(device) 
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=cfg['lr'])
-    #optimizer = torch.optim.AdamW(model.parameters(), lr=cfg['lr'])
+    #optimizer = torch.optim.Adam(model.parameters(), lr=cfg['lr'])
+    optimizer = torch.optim.AdamW(model.parameters(), lr=cfg['lr'])
+    early_stopper = EarlyStopper(patience=20, min_delta=0.01)
+
 
     # Continue training or start from scratch
-    """ TODO
+    """ TODO: this may be necessary, once training is conducted with more data
     if cfg['continue']:
         ...
     else:
@@ -101,11 +104,11 @@ def main():
         print("Epoch:", epoch, "/", cfg['num_epochs'])
         pbar = tqdm(
             train_dataloader,
-            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]",
-            colour='green'
+            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]"
         )
 
-        # Epoch placeholders
+        # Metrics for this epoch. 
+        # TODO: IoUTable should be changed to follow this pattern
         accuracies, val_accuracies, losses, val_losses =  [], [], [], []
 
         model.train()
@@ -115,13 +118,11 @@ def main():
             pixel_values = batch["pixel_values"].to(device)
             labels = batch["labels"].to(device)
 
-            # Zero the parameter gradients
+            # Zero Parameter Gradients + Forward
             optimizer.zero_grad()
-
-            # Forward
             outputs = model(pixel_values=pixel_values, labels=labels)
 
-            # Evaluate
+            # Get Predictions
             upsampled_logits = torch.nn.functional.interpolate(
                 outputs.logits,
                 size=labels.shape[-2:],
@@ -143,11 +144,11 @@ def main():
 
             pbar.set_postfix({'Pixelwise Acc': sum(accuracies) / len(accuracies), 'Loss': sum(losses) / len(losses)})
 
-            # Backward + Optimize
+            # Backward + Update Params
             loss.backward()
             optimizer.step()
 
-        else: # is there a better way?
+        else: # TODO: is there a better way?
             model.eval()
 
             with torch.no_grad():
@@ -169,23 +170,23 @@ def main():
                     pred_labels = predicted[mask].cpu().detach().numpy()
                     true_labels = labels[mask].cpu().detach().numpy()
 
-                    # Get val metrics
+                    # Get val metrics for one batch
                     accuracy = accuracy_score(pred_labels, true_labels)
                     val_loss = outputs.loss
                     val_accuracies.append(accuracy)
                     val_losses.append(val_loss.item())
                     val_iou_table.get_iou_per_class_epoch(predicted, labels)
 
-        # Process results for this epoch   
+        # Mean performance for this epoch   
         train_accuracy = sum(accuracies) / len(accuracies)
         train_loss = sum(losses) / len(losses)
         val_accuracy = sum(val_accuracies) / len(val_accuracies)
         val_loss = sum(val_losses) / len(val_losses)
 
-        # is this correct?
-        val_losses.append(val_loss)
+        # TODO: remove
+        #val_losses.append(val_loss)
 
-        # Update IoU Tables (get MIoU)
+        # Get MIoU
         train_iou_table.update_data()
         train_miou = train_iou_table.mean_iou
         
@@ -218,6 +219,10 @@ def main():
             delete_old_checkpoint(type="best", checkpoint_dir=log_dir + "/checkpoints/")
             
         epoch_counter += 1
+
+        if early_stopper.early_stop(val_accuracy):
+            print("\nTerminating due to Early Stop.")
+            break
 
     # Finished training
     plot_curves(log_dir, log_file="/logs.csv")

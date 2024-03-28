@@ -133,7 +133,7 @@ def plot_curves(log_dir, log_file):
     plt.rc('legend', fontsize=SMALL_SIZE)
     plt.rc('lines', linewidth=2)
     plt.rcParams['axes.linewidth'] = 0.1    
-    plt.rc('axes', facecolor='#E6E6E6', edgecolor='none',
+    plt.rc('axes', facecolor='#E6E6E6', edgecolor='#000000',
            axisbelow=True, grid=True, prop_cycle=colors)
     plt.rc('grid', color='w', linestyle='solid')
     plt.rc('patch', edgecolor='#E6E6E6')
@@ -145,7 +145,7 @@ def plot_curves(log_dir, log_file):
     df_miou = df[[col for col in df.columns if "IoU" in col]]
     df_list = [df_loss, df_acc, df_miou]
 
-    cfg_axes = {0: {"ylabel": "Loss", "ylimits": [0, 5]},
+    cfg_axes = {0: {"ylabel": "Loss", "ylimits": None},
                 1: {"ylabel": "Pixelwise Acc.", "ylimits": [0, 1]},
                 2: {"ylabel": "MIoU", "ylimits": [0, 1]}
     }
@@ -159,7 +159,8 @@ def plot_curves(log_dir, log_file):
         axes[idx].legend()
         axes[idx].set_ylabel(cfg_axes[idx]["ylabel"])
         axes[idx].set_ylim(cfg_axes[idx]["ylimits"])
+        axes[idx].set_xlabel("")
 
-    plt.xlabel("Epochs")
-    plt.tight_layout()
+    plt.xlabel("Epoch")
+    plt.subplots_adjust(hspace=0.5)   
     plt.savefig(log_dir + "/learning_curves.pdf")
