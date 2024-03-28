@@ -72,7 +72,6 @@ def main():
     optimizer = torch.optim.AdamW(model.parameters(), lr=cfg['lr'])
     early_stopper = EarlyStopper(patience=20, min_delta=0.01)
 
-
     # Continue training or start from scratch
     """ TODO: this may be necessary, once training is conducted with more data
     if cfg['continue']:
