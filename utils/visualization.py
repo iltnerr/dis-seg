@@ -1,6 +1,5 @@
 import numpy as np
 import cv2
-import csv
 import pandas as pd
 from cycler import cycler
 import matplotlib.pyplot as plt
@@ -8,119 +7,87 @@ from matplotlib.patches import Patch
 
 
 def ade_palette():
-    """Custom palette that maps each class to BGR values.
-    TODO: uniform distribution in color space depending on the number of classes. 
+    """
+    Color palette that maps each class to BGR values.
+
+    Note on 'Injured_Person' and 'Person' classes:
+    Originally, injured and healthy people were distinguished and annotated as different classes. 
+    However, with a too small dataset, this does not work out. Therefore, these are considered as same classes for now (same color in visualizations).
+    
+    TODO: color mapping should be integrated into the cls_dict. Also, uniform distribution in color space depending on the number of classes. 
     """
     return [
-        [0, 0, 0],      # background (BLAK)
-        [255, 0, 0],    # Damaged_buildings (BLUE)
-        [0, 255, 0],    # Damaged_road (GREEN)
-        [0, 0, 255],    # Damaged_vehicle (RED)
+        [0, 0, 0],      # Background (BLACK)
+        [255, 0, 0],    # Building (BLUE)
+        [0, 255, 0],    # Road (GREEN)
+        [0, 0, 255],    # Vehicle (RED)
         [255, 255, 0],  # Debris (YELLOW)
         [255, 0, 255],  # Fire (MAGENTA)
-        [0, 255, 255],  # Flood (CYAN)
-        [128, 0, 0],    # Injured_animal (MAROON)
-        [0, 128, 0],    # Injured_person (OLIVE)
-        [128, 128, 128],# Sky_background (GRAY)
+        [0, 255, 255],  # Water (CYAN)
+        [128, 0, 0],    # Animal (MAROON)
+        #[0, 128, 0],    # Injured_Person (OLIVE)
+        [0, 0, 128],    # Injured_Person (Same color as 'Person', see above)
+        [128, 128, 128],# Sky (GRAY)
         [128, 0, 128],  # Smoke (PURPLE)
-        [0, 128, 128],  # Trees (TEAL)
-        [0, 0, 128]     # Uninjured_person (NAVY)
+        [0, 128, 128],  # Tree (TEAL)
+        [0, 0, 128]     # Person (NAVY)
     ]
 
-def normalize_color(color):
-    # Convert BGR to RGB and normalize to the range 0-1
-    return tuple(component / 255.0 for component in reversed(color))
+def plot_compare_predictions(img, preds, label2id, gt_path, alpha_img=0.5):
+    gt_map = cv2.imread(gt_path, cv2.IMREAD_GRAYSCALE)
 
-def plot_result_gt(img, seg, cls_dict, infer_cfg, model):
-    
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 15))
-    
-    map = seg
-    classes_map = np.unique(map).tolist()
-    unique_classes = [model.config.id2label[idx] if idx != 255 else None for idx in classes_map]
+    # Colorize segmentations   
+    colored_preds = np.zeros((preds.shape[0], preds.shape[1], 3), dtype=np.uint8)
+    colored_gt = np.zeros((gt_map.shape[0], gt_map.shape[1], 3), dtype=np.uint8)
 
-    id2label = dict(cls_dict)
-    label2id = {v: k for k, v in cls_dict.items()}
-
-    color_seg = np.zeros((seg.shape[0], seg.shape[1], 3), dtype=np.uint8)  # height, width, 3
     palette = np.array(ade_palette())
-
     for label, color in enumerate(palette):
-        color_seg[seg == label, :] = color
+        colored_preds[preds == label] = color 
+        colored_gt[gt_map == label] = color    
 
-    # Convert to BGR
-    color_seg = color_seg[..., ::-1]
+    colored_preds = cv2.cvtColor(colored_preds, cv2.COLOR_BGR2RGB)
+    colored_gt = cv2.cvtColor(colored_gt, cv2.COLOR_BGR2RGB)
 
-    img = np.array(img) * 0.5 + color_seg * 0.5
-    img = img.astype(np.uint8)
+    # Blend prediction with image
+    blend_img = np.array(img) * alpha_img + colored_preds * (1-alpha_img)
+    blend_img = blend_img.astype(np.uint8)
 
-    ax1.imshow(img)
-    ax1.set_title('Original image an model\'s prediction Overlay', fontsize=13)  # Add title to the first subplot
+    # Figure
+    fig = plt.figure(constrained_layout=True, figsize=(12, 12))
+    gs = fig.add_gridspec(3, 2, height_ratios=[4,1,4])
 
-    legend_elements = [Patch(facecolor=(clr[::-1] / 255), label=cls_name) for [cls_name, clr] in zip(label2id.keys(), palette)]
-    ax1.legend(handles=legend_elements, loc='upper left', bbox_to_anchor=(1, 1))
-
-    # Create a text box with class information
-    class_info = "Detected classes in this image:\n" + "\n".join([f"{cls}: {cls_id}" for cls, cls_id in zip(unique_classes, classes_map)])
-    ax1.text(-0.9, 0.0, class_info, fontsize=9, color='white', transform=ax1.transAxes, verticalalignment='bottom', bbox=dict(facecolor='black', alpha=0.7))
-
-    # Retrieve input_path from infer_cfg
-    input_path = infer_cfg['input_path']
-
-    # Generate seg_map_path from input_path
-    seg_map_path = input_path.replace("images", "annotations").replace(".jpg", "_mask.png")
-
-    # Load the grayscale segmentation map
-    seg_map = cv2.imread(seg_map_path, cv2.IMREAD_GRAYSCALE)
+    axes = [fig.add_subplot(gs[0, 0]), # Image
+            fig.add_subplot(gs[0, 1]), # Overlay
+            fig.add_subplot(gs[2, 0]), # GT
+            fig.add_subplot(gs[2, 1]), # Pred
+            fig.add_subplot(gs[1, :])  # Legend
+    ]
     
-    # Apply color mapping to the segmentation map
-    colored_seg_map = np.zeros((seg_map.shape[0], seg_map.shape[1], 3), dtype=np.uint8)
-   
-    for class_idx, color in enumerate(palette):
-        colored_seg_map[seg_map == class_idx] = color
-        
-    # Display the colored segmentation map using Matplotlib
-    ax2.imshow(cv2.cvtColor(colored_seg_map, cv2.COLOR_BGR2RGB))
-    ax2.axis('off')  # Turn off axis labels and ticks
-    ax2.set_title('Ground truth annotation', fontsize=13)  # Add title to the second subplot
+    plt_cfg = {0: {'img': img, 
+                   'title': 'Image'},
+               1: {'img': blend_img,
+                   'title': 'Image + Predictions'},
+               2: {'img': colored_gt,
+                   'title': 'GT Annotation'},
+               3: {'img': colored_preds,
+                   'title': 'Predictions'}
+                   } 
+    
+    # 4 Images
+    for idx in range(len(axes)-1):
+        cfg = plt_cfg[idx]
+        axes[idx].imshow(cfg['img'])
+        axes[idx].set_title(cfg['title'], fontsize=16)
+        axes[idx].axis('off')
 
+    # Legend
+    legend_elements = [Patch(facecolor=(color[::-1] / 255), label=cls_name) for [cls_name, color] in zip(label2id.keys(), palette)]
+    del legend_elements[8] # remove entry for 'Injured_Person' class
+    axes[4].legend(handles=legend_elements, ncol=4, loc='center', bbox_to_anchor=(0.5, 0.5))
+    axes[4].axis('off')
     plt.show()    
 
-def plot_result(img, seg, cls_dict, model):
-    
-    map = seg
-    classes_map = np.unique(map).tolist()
-    unique_classes = [model.config.id2label[idx] if idx!=255 else None for idx in classes_map]
-    print("Classes in this image:", unique_classes, classes_map)
-    id2label = dict(cls_dict)
-    label2id = {v: k for k, v in cls_dict.items()}
-
-    color_seg = np.zeros((seg.shape[0], seg.shape[1], 3), dtype=np.uint8)  # height, width, 3
-    palette = np.array(ade_palette())
-
-    for label, color in enumerate(palette):
-        color_seg[seg == label, :] = color
-
-    # Convert to BGR
-    color_seg = color_seg[..., ::-1]
-
-    img = np.array(img) * 0.5 + color_seg * 0.5
-    img = img.astype(np.uint8)
-
-    plt.figure(figsize=(15, 10))
-    plt.imshow(img)
-
-    legend_elements = [Patch(facecolor=(clr[::-1] / 255), label=cls_name) for [cls_name, clr] in zip(label2id.keys(), palette)]
-    plt.legend(handles=legend_elements, loc="upper right", bbox_to_anchor=(1.30, 0.9))
-
-    #Create a text box with class information
-    class_info = "Detected classes in this image:\n" + "\n".join([f"{cls}: {cls_id}" for cls, cls_id in zip(unique_classes, classes_map)])
-    plt.text(-0.5, 0.0, class_info, fontsize=12, color='white', transform=plt.gca().transAxes, verticalalignment='bottom', bbox=dict(facecolor='black', alpha=0.7))
-
-    plt.show()
-
 def plot_curves(log_dir, log_file):
-
     colors = cycler('color', ['#EE6666', '#3388BB', '#9988DD', '#EECC55', '#88BB44', '#FFBBBB'])
 
     # Settings

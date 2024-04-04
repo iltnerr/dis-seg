@@ -13,7 +13,7 @@ from utils.misc import initialize_session, save_checkpoint, log_metrics, log_tra
 from utils.visualization import plot_curves
 from utils.early_stopper import EarlyStopper
 from configs.default_cfg import default_cfg
-from dataset.dataset_utils import cls_dict, get_transforms
+from dataset.dataset_utils import cls_dict, get_augmentations
 from dataset.disaster_dataset import DisasterSegDataset
 from evaluation.metrics import IoUTable
 
@@ -28,7 +28,7 @@ def main():
     initialize_session(local_dir=common_paths["train_runs"], session_id=session_id)
 
     # Augmentations
-    train_transforms = get_transforms(mode='train')
+    train_transforms = get_augmentations(mode='train')
     val_transforms = None
 
     # Datasets
@@ -68,12 +68,11 @@ def main():
     )  
     model.to(device) 
 
-    #optimizer = torch.optim.Adam(model.parameters(), lr=cfg['lr'])
     optimizer = torch.optim.AdamW(model.parameters(), lr=cfg['lr'])
-    early_stopper = EarlyStopper(patience=20, min_delta=0.01)
+    early_stopper = EarlyStopper(patience=cfg['early_stop_patience'], min_delta=cfg['early_stop_min_delta'])
 
     # Continue training or start from scratch
-    """ TODO: this may be necessary, once training is conducted with more data
+    """ TODO: this may be necessary once training is conducted with more data
     if cfg['continue']:
         ...
     else:
@@ -93,14 +92,14 @@ def main():
                           "Val Dataset Size": len(valid_dataset),
                           "Batch Size": cfg['batch_size'],
                           "Using Device": str(device),
-                          "Epochs": cfg['num_epochs'],
+                          "Max Epochs": cfg['max_epochs'],
                           "Learning Rate": cfg['lr']
                           })
 
     epoch_counter = 1
     # Iterate through epochs
-    for epoch in range(start_epoch, cfg['num_epochs'] + 1):
-        print("Epoch:", epoch, "/", cfg['num_epochs'])
+    for epoch in range(start_epoch, cfg['max_epochs'] + 1):
+        print("Epoch:", epoch, "/", cfg['max_epochs'])
         pbar = tqdm(
             train_dataloader,
             bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]"
@@ -182,9 +181,6 @@ def main():
         val_accuracy = sum(val_accuracies) / len(val_accuracies)
         val_loss = sum(val_losses) / len(val_losses)
 
-        # TODO: remove
-        #val_losses.append(val_loss)
-
         # Get MIoU
         train_iou_table.update_data()
         train_miou = train_iou_table.mean_iou
@@ -201,11 +197,12 @@ def main():
             Val MIoU: {val_miou:.4f}"
         )
     
+        # TODO: logger class
         log_metrics(epoch, train_accuracy, train_loss, train_miou, val_accuracy, val_loss, val_miou,
-                            logs_path=log_dir + "/logs.csv") # better use a logger
+                            logs_path=log_dir + "/logs.csv")
         
         # Update checkpoints
-        if (epoch_counter == cfg["update_frequency"]):
+        if (epoch_counter == cfg["update_checkpoint_frequency"]):
             save_checkpoint(epoch, model.state_dict(), optimizer.state_dict(), loss, 
                             checkpoint_path=log_dir + f"/checkpoints/last__epoch-{epoch}__acc-{val_accuracy:.3f}__miou-{val_miou:.3f}.pt")
             delete_old_checkpoint(type="last", checkpoint_dir=log_dir + "/checkpoints/")
@@ -220,7 +217,6 @@ def main():
         epoch_counter += 1
 
         if early_stopper.early_stop(val_accuracy):
-            print("\nTerminating due to Early Stop.")
             break
 
     # Finished training

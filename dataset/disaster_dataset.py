@@ -49,6 +49,7 @@ class DisasterSegDataset(Dataset):
         image = Image.open(os.path.join(self.img_dir, self.images[idx]))
         segmentation_map = Image.open(os.path.join(self.ann_dir, self.annotations[idx]))
 
+        # TODO: Check augmentations
         if self.transforms:
             data = self.transforms(image=np.array(image), mask=np.array(segmentation_map))
             # randomly crop + pad both image and segmentation map to same size

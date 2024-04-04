@@ -2,23 +2,23 @@ import albumentations as A
 
 
 cls_dict = {
-    0: 'background',
-    1: 'Damaged_buildings',
-    2: 'Damaged_road',
-    3: 'Damaged_vehicle',
+    0: 'Background',
+    1: 'Building',
+    2: 'Road',
+    3: 'Vehicle',
     4: 'Debris',
     5: 'Fire',
-    6: 'Flood',
-    7: 'Injured_animal',
-    8: 'Injured_person',
-    9: 'Sky_background',
+    6: 'Water',
+    7: 'Animal',
+    8: 'Injured_Person', # Keeping this class for convenience, since it is part of the annotations. With a small dataset it does not make sense to distinguish healthy and injured persons, however.
+    9: 'Sky',
     10: 'Smoke',
-    11: 'Trees',
-    12: 'Uninjured_person'
+    11: 'Tree',
+    12: 'Person'
 }
         
 
-def get_transforms(mode='train'):
+def get_augmentations(mode='train'):
     """
     On-the-Fly augmentations to increase training dataset size artificially. 
     """
@@ -44,7 +44,6 @@ def get_transforms(mode='train'):
             ], p=0.1),
             A.ImageCompression(quality_lower=35, p=0.3),
             A.Perspective(scale=(0.05, 0.13), p=0.1),
-            # A.RandomCrop(width=256, height=256, p=0.5),
             A.Cutout(num_holes=8, max_h_size=40, max_w_size=40, p=0.05),
             A.LongestMaxSize(max_size=512, p=1),
             A.PadIfNeeded(512, 512, border_mode=0, p=1),
