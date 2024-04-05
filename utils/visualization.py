@@ -33,8 +33,7 @@ def ade_palette():
         [0, 0, 128]     # Person (NAVY)
     ]
 
-def plot_compare_predictions(img, preds, label2id, gt_path, alpha_img=0.5):
-    gt_map = cv2.imread(gt_path, cv2.IMREAD_GRAYSCALE)
+def plot_compare_predictions(img, preds, label2id, gt_map, alpha_img=0.5):
 
     # Colorize segmentations   
     colored_preds = np.zeros((preds.shape[0], preds.shape[1], 3), dtype=np.uint8)

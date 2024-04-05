@@ -7,15 +7,9 @@ from torch.utils.data import Dataset
 class DisasterSegDataset(Dataset):
     """Semantic Image Segmentation Dataset."""
 
-    def __init__(self, root_dir, feature_extractor, train=True, transforms=None):
-        """
-        Args:
-            root_dir (string): Root directory of the dataset containing the images + annotations.
-            feature_extractor (SegFormerFeatureExtractor): feature extractor to prepare images + segmentation maps.
-            train (bool): Whether to load "training" or "validation" images + annotations.
-        """
+    def __init__(self, root_dir, preprocessor, train=True, transforms=None):
         self.root_dir = root_dir
-        self.feature_extractor = feature_extractor
+        self.preprocessor = preprocessor
         self.train = train
         self.transforms = transforms
 
@@ -53,10 +47,10 @@ class DisasterSegDataset(Dataset):
         if self.transforms:
             data = self.transforms(image=np.array(image), mask=np.array(segmentation_map))
             # randomly crop + pad both image and segmentation map to same size
-            encoded_inputs = self.feature_extractor(data['image'], data['mask'], return_tensors="pt")
+            encoded_inputs = self.preprocessor(data['image'], data['mask'], return_tensors="pt")
 
         else:
-            encoded_inputs = self.feature_extractor(image, segmentation_map, return_tensors="pt")
+            encoded_inputs = self.preprocessor(image, segmentation_map, return_tensors="pt")
 
         for k,v in encoded_inputs.items():
             encoded_inputs[k].squeeze_()  # remove batch dimension

@@ -1,21 +1,23 @@
 import torch
 import datetime
 import uuid
-
-from torch.utils.data import DataLoader, Subset
-from sklearn.metrics import accuracy_score
 from tqdm import tqdm
 
+from torch.utils.data import DataLoader, Subset
 from transformers import SegformerImageProcessor, SegformerForSemanticSegmentation
 
 from utils.common import common_paths
 from utils.misc import initialize_session, save_checkpoint, log_metrics, log_train_config, delete_old_checkpoint
 from utils.visualization import plot_curves
 from utils.early_stopper import EarlyStopper
-from configs.default_cfg import default_cfg
+
 from dataset.dataset_utils import cls_dict, get_augmentations
 from dataset.disaster_dataset import DisasterSegDataset
-from evaluation.metrics import IoUTable
+
+from sklearn.metrics import accuracy_score
+from torchmetrics import JaccardIndex
+
+from configs.train_cfg import default_cfg
 
 
 def main():
@@ -32,17 +34,18 @@ def main():
     val_transforms = None
 
     # Datasets
-    feature_extractor = SegformerImageProcessor(reduce_zero_labels=True)
+    preprocessor = SegformerImageProcessor()
+    # preprocessor = SegformerImageProcessor(do_reduce_labels=True) TODO: remove
 
     train_dataset = DisasterSegDataset(
         root_dir=common_paths["dataset_root"],
-        feature_extractor=feature_extractor,
+        preprocessor=preprocessor,
         train=True,
         transforms=train_transforms,
     )
     valid_dataset = DisasterSegDataset(
         root_dir=common_paths["dataset_root"],
-        feature_extractor=feature_extractor,
+        preprocessor=preprocessor,
         train=False,
         transforms=val_transforms,
     )
@@ -71,6 +74,12 @@ def main():
     optimizer = torch.optim.AdamW(model.parameters(), lr=cfg['lr'])
     early_stopper = EarlyStopper(patience=cfg['early_stop_patience'], min_delta=cfg['early_stop_min_delta'])
 
+    train_jaccard = JaccardIndex(task='multiclass', num_classes=len(cls_dict), ignore_index=0, average='macro').to(device) 
+    val_jaccard = JaccardIndex(task='multiclass', num_classes=len(cls_dict), ignore_index=0, average='macro').to(device) 
+
+    # Best metric variable for checkpointing
+    best_val_metric = 0.0
+
     # Continue training or start from scratch
     """ TODO: this may be necessary once training is conducted with more data
     if cfg['continue']:
@@ -79,12 +88,6 @@ def main():
         start_epoch = 1
     """
     start_epoch = 1
-
-    train_iou_table = IoUTable(cfg, cls_dict)
-    val_iou_table = IoUTable(cfg, cls_dict)
-
-    # Best metric variable for checkpointing
-    best_val_metric = 0.0
 
     log_train_config(log_dir=log_dir,
                      cfg={"Session ID": session_id,
@@ -106,7 +109,6 @@ def main():
         )
 
         # Metrics for this epoch. 
-        # TODO: IoUTable should be changed to follow this pattern
         accuracies, val_accuracies, losses, val_losses =  [], [], [], []
 
         model.train()
@@ -127,9 +129,10 @@ def main():
                 mode="bilinear",
                 align_corners=False
             )
-
             predicted = upsampled_logits.argmax(dim=1)
-            mask = (labels != 255)  # exclude background class in the accuracy calculation
+
+            # exclude background class for accuracy
+            mask = (labels != 0)  
             pred_labels = predicted[mask].detach().cpu().numpy()
             true_labels = labels[mask].detach().cpu().numpy()
 
@@ -138,9 +141,7 @@ def main():
             loss = outputs.loss
             accuracies.append(accuracy)
             losses.append(loss.item())
-            train_iou_table.get_iou_per_class_epoch(predicted, labels)
-
-            pbar.set_postfix({'Pixelwise Acc': sum(accuracies) / len(accuracies), 'Loss': sum(losses) / len(losses)})
+            train_jaccard(predicted, labels)
 
             # Backward + Update Params
             loss.backward()
@@ -162,9 +163,10 @@ def main():
                         mode="bilinear",
                         align_corners=False
                     )
-
                     predicted = upsampled_logits.argmax(dim=1)
-                    mask = (labels != 255)  # exclude background class in the accuracy calculation
+                    
+                    # Exclude background class in the accuracy calculation
+                    mask = (labels != 0)  
                     pred_labels = predicted[mask].cpu().detach().numpy()
                     true_labels = labels[mask].cpu().detach().numpy()
 
@@ -173,20 +175,15 @@ def main():
                     val_loss = outputs.loss
                     val_accuracies.append(accuracy)
                     val_losses.append(val_loss.item())
-                    val_iou_table.get_iou_per_class_epoch(predicted, labels)
+                    val_jaccard(predicted, labels)
 
         # Mean performance for this epoch   
         train_accuracy = sum(accuracies) / len(accuracies)
         train_loss = sum(losses) / len(losses)
         val_accuracy = sum(val_accuracies) / len(val_accuracies)
         val_loss = sum(val_losses) / len(val_losses)
-
-        # Get MIoU
-        train_iou_table.update_data()
-        train_miou = train_iou_table.mean_iou
-        
-        val_iou_table.update_data()
-        val_miou = val_iou_table.mean_iou
+        train_miou = train_jaccard.compute().item()
+        val_miou = val_jaccard.compute().item()
 
         print(
             f"Train Pixelwise Accuracy: {train_accuracy:.4f} \
@@ -213,7 +210,11 @@ def main():
             save_checkpoint(epoch, model.state_dict(), optimizer.state_dict(), loss,
                             checkpoint_path=log_dir + f"/checkpoints/best__epoch-{epoch}__acc-{val_accuracy:.3f}__miou-{val_miou:.3f}.pt")
             delete_old_checkpoint(type="best", checkpoint_dir=log_dir + "/checkpoints/")
-            
+
+        # Reset metrics for next epoch    
+        train_jaccard.reset()
+        val_jaccard.reset()
+
         epoch_counter += 1
 
         if early_stopper.early_stop(val_accuracy):
