@@ -1,13 +1,13 @@
-IS_OFFICE = False
+is_office = False
 
 default_cfg = {
-    'IS_OFFICE': IS_OFFICE,
-    'batch_size': 8 if not IS_OFFICE else 2,
-    'max_epochs': 1000 if not IS_OFFICE else 3,
-    'update_checkpoint_frequency': 20 if not IS_OFFICE else 2, # best checkpoint is saved independently
-    'lr': 1e-5,
-    'early_stop_patience': 100,
+    'batch_size': 8 if not is_office else 2,
     'early_stop_min_delta': 0.01,
-    'model_type': 'nvidia/mit-b2',
-    'checkpoint_load_path': False,
+    'early_stop_patience': 20,
+    'is_office': is_office,
+    'lr': 1e-5,
+    'max_epochs': 200 if not is_office else 3,
+    'segformer_config_path': './models/segformer-b2-config.json',
+    'segformer_pretrained_weights_path': '/cdtemp/richard/coding/model-checkpoints/dis-seg/segformer-mit-b2-original-checkpoints.bin', # initialize pretrained weights for training
+    'update_checkpoint_frequency': 20 if not is_office else 2, # best checkpoint is saved independently of this setting
 }

@@ -3,7 +3,8 @@ from tqdm import tqdm
 
 from torch.utils.data import DataLoader
 from sklearn.metrics import accuracy_score
-from transformers import SegformerImageProcessor, SegformerForSemanticSegmentation
+from transformers import SegformerImageProcessor
+from models.load_models import load_segformer
 from utils.common import common_paths
 from configs.infer_cfg import default_cfg
 from dataset.dataset_utils import cls_dict
@@ -15,6 +16,7 @@ cfg = default_cfg
 
 # Dataset
 preprocessor = SegformerImageProcessor()
+
 valid_dataset = DisasterSegDataset(
     root_dir=common_paths["dataset_root"],
     preprocessor=preprocessor,
@@ -30,16 +32,11 @@ pbar = tqdm(valid_dataloader,
 id2label = dict(cls_dict)
 label2id = {v: k for k, v in cls_dict.items()}
 
-model = SegformerForSemanticSegmentation.from_pretrained(
-    cfg['model_type'],
-    num_labels=len(id2label),
-    id2label=id2label,
-    label2id=label2id,
-)
+model = load_segformer(config_path=cfg['segformer_config_path'], id2label=id2label, label2id=label2id)
 
 checkpoint = torch.load(cfg['checkpoint_load_path'], map_location='cpu')
 model.load_state_dict(checkpoint['model_state_dict'])
-device = torch.device('cuda' if torch.cuda.is_available() and not cfg['IS_OFFICE'] else 'cpu')
+device = torch.device('cuda' if torch.cuda.is_available() and not cfg['is_office'] else 'cpu')
 model.to(device)
 model.eval()
 

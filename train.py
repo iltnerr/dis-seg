@@ -4,7 +4,8 @@ import uuid
 from tqdm import tqdm
 
 from torch.utils.data import DataLoader, Subset
-from transformers import SegformerImageProcessor, SegformerForSemanticSegmentation
+from transformers import SegformerImageProcessor
+from models.load_models import load_segformer
 
 from utils.common import common_paths
 from utils.misc import initialize_session, save_checkpoint, log_metrics, log_train_config, delete_old_checkpoint
@@ -22,7 +23,7 @@ from configs.train_cfg import default_cfg
 
 def main():
     cfg = default_cfg
-    device = torch.device("cuda" if torch.cuda.is_available() and not cfg['IS_OFFICE'] else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() and not cfg['is_office'] else "cpu")
 
     # Create directories for this session
     session_id = '{date:%Y-%m-%d}__'.format(date=datetime.datetime.now()) + uuid.uuid4().hex
@@ -35,7 +36,6 @@ def main():
 
     # Datasets
     preprocessor = SegformerImageProcessor()
-    # preprocessor = SegformerImageProcessor(do_reduce_labels=True) TODO: remove
 
     train_dataset = DisasterSegDataset(
         root_dir=common_paths["dataset_root"],
@@ -51,7 +51,7 @@ def main():
     )
 
     # Use subsets for testing
-    if cfg['IS_OFFICE']:
+    if cfg['is_office']:
         train_dataset = Subset(train_dataset, torch.arange(0,6))
         valid_dataset = Subset(train_dataset, torch.arange(0,2))
 
@@ -63,12 +63,8 @@ def main():
     id2label = dict(cls_dict)
     label2id = {v: k for k, v in cls_dict.items()}
 
-    model = SegformerForSemanticSegmentation.from_pretrained(
-        cfg['model_type'],
-        num_labels=len(id2label),
-        id2label=id2label,
-        label2id=label2id,
-    )  
+    # Use pretrained segformer model 
+    model = load_segformer(config_path=cfg['segformer_config_path'], id2label=id2label, label2id=label2id, checkpoint_file=cfg['segformer_pretrained_weights_path'])
     model.to(device) 
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=cfg['lr'])
@@ -96,7 +92,9 @@ def main():
                           "Batch Size": cfg['batch_size'],
                           "Using Device": str(device),
                           "Max Epochs": cfg['max_epochs'],
-                          "Learning Rate": cfg['lr']
+                          "Learning Rate": cfg['lr'],
+                          "Early Stop Patience": cfg['early_stop_patience'],
+                          "Early Stop Delta": cfg['early_stop_min_delta'] 
                           })
 
     epoch_counter = 1
@@ -131,7 +129,7 @@ def main():
             )
             predicted = upsampled_logits.argmax(dim=1)
 
-            # exclude background class for accuracy
+            # Exclude background class for accuracy
             mask = (labels != 0)  
             pred_labels = predicted[mask].detach().cpu().numpy()
             true_labels = labels[mask].detach().cpu().numpy()

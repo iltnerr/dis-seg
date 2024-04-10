@@ -33,16 +33,17 @@ def ade_palette():
         [0, 0, 128]     # Person (NAVY)
     ]
 
-def plot_compare_predictions(img, preds, label2id, gt_map, alpha_img=0.5):
+def plot_compare_predictions(img, preds, label2id, gt_map=None, alpha_img=0.5):
 
     # Colorize segmentations   
     colored_preds = np.zeros((preds.shape[0], preds.shape[1], 3), dtype=np.uint8)
-    colored_gt = np.zeros((gt_map.shape[0], gt_map.shape[1], 3), dtype=np.uint8)
+    colored_gt = np.zeros((img.height, img.width, 3), dtype=np.uint8)
 
     palette = np.array(ade_palette())
     for label, color in enumerate(palette):
         colored_preds[preds == label] = color 
-        colored_gt[gt_map == label] = color    
+        if gt_map is not None:
+            colored_gt[gt_map == label] = color
 
     colored_preds = cv2.cvtColor(colored_preds, cv2.COLOR_BGR2RGB)
     colored_gt = cv2.cvtColor(colored_gt, cv2.COLOR_BGR2RGB)
