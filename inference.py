@@ -17,12 +17,10 @@ cfg = default_cfg
 img_dir = common_paths['dataset_root'] + 'images/valid/'
 
 # Model
-id2label = dict(cls_dict)
 label2id = {v: k for k, v in cls_dict.items()}
-
 preprocessor = SegformerImageProcessor()
 
-model = load_segformer(config_path=common_paths['segformer_config_path'], id2label=id2label, label2id=label2id)
+model = load_segformer(config_path=common_paths['segformer_config_path'], id2label=cls_dict, label2id=label2id)
 
 checkpoint = torch.load(common_paths['checkpoint_load_path'], map_location='cpu')
 model.load_state_dict(checkpoint['model_state_dict'], strict=True)
@@ -59,6 +57,4 @@ with torch.no_grad():
 
         plot_compare_predictions(img=img, preds=preds, label2id=label2id, gt_map=gt_map,
                                 alpha_img=0.7)
-        
-
 exit()

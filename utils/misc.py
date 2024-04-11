@@ -40,13 +40,13 @@ def load_checkpoint(cfg, model, optimizer):
 
     return model, optimizer, start_epoch, loss, val_iou_per_class
 
-def save_checkpoint(epoch, model_state_dict, optimizer_state_dict, loss, checkpoint_path):   
+def save_checkpoint(epoch, model_state_dict, optimizer_state_dict, checkpoint_path):   
     torch.save({
         'epoch': epoch,
         'model_state_dict': model_state_dict,
         'optimizer_state_dict': optimizer_state_dict,
-        'loss': loss,
-    }, checkpoint_path)
+        }, 
+        checkpoint_path)
 
 def log_metrics(epoch, train_accuracy, train_loss, train_miou, val_accuracy, val_loss, val_miou, logs_path):
     header = ['Epoch', 'Train Acc', 'Train Loss', 'Train MIoU', 'Val Acc', 'Val Loss', 'Val MIoU']
