@@ -32,9 +32,9 @@ pbar = tqdm(valid_dataloader,
 id2label = dict(cls_dict)
 label2id = {v: k for k, v in cls_dict.items()}
 
-model = load_segformer(config_path=cfg['segformer_config_path'], id2label=id2label, label2id=label2id)
+model = load_segformer(config_path=common_paths['segformer_config_path'], id2label=id2label, label2id=label2id)
 
-checkpoint = torch.load(cfg['checkpoint_load_path'], map_location='cpu')
+checkpoint = torch.load(common_paths['checkpoint_load_path'], map_location='cpu')
 model.load_state_dict(checkpoint['model_state_dict'])
 device = torch.device('cuda' if torch.cuda.is_available() and not cfg['is_office'] else 'cpu')
 model.to(device)

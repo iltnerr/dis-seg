@@ -64,7 +64,7 @@ def main():
     label2id = {v: k for k, v in cls_dict.items()}
 
     # Use pretrained segformer model 
-    model = load_segformer(config_path=cfg['segformer_config_path'], id2label=id2label, label2id=label2id, checkpoint_file=cfg['segformer_pretrained_weights_path'])
+    model = load_segformer(config_path=common_paths['segformer_config_path'], id2label=id2label, label2id=label2id, checkpoint_file=common_paths['segformer_pretrained_weights_path'])
     model.to(device) 
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=cfg['lr'])
@@ -222,6 +222,7 @@ def main():
     plot_curves(log_dir, log_file="/logs.csv")
 
 
+is_office = True
 if __name__ == "__main__":
     t_start = datetime.datetime.now()
     main()
