@@ -5,16 +5,22 @@ random augmentation examples
 ## Learning Curves
 <img src="examples/learning-curves.png">
 
-## Examples
+## Selected Examples: Earthquake
+<img src="examples/earthquake-1.png">
+<img src="examples/earthquake-2.png">
+<img src="examples/earthquake-3.png">
 
-### Earthquake
-<img src="examples/earthquake-1.png" width="50%">
-
-### Fire
+## Selected Examples: Fire
 <img src="examples/fire-1.png">
+<img src="examples/fire-2.png">
+<img src="examples/fire-3.png">
 
-### Flood
+## Selected Examples: Flood
 <img src="examples/flood-1.png">
+<img src="examples/flood-2.png">
+<img src="examples/flood-3.png">
 
-### Infrastructure
+## Selected Examples: Infrastructure
 <img src="examples/infrastructure-1.png">
+<img src="examples/infrastructure-2.png">
+<img src="examples/infrastructure-3.png">
