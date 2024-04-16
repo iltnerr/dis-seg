@@ -14,7 +14,7 @@ def ade_palette():
     Originally, injured and healthy people were distinguished and annotated as different classes. 
     However, with a too small dataset, this does not work out. Therefore, these are considered as same classes for now (same color in visualizations).
     
-    TODO: color mapping should be integrated into the cls_dict. Also, uniform distribution in color space depending on the number of classes. 
+    TODO: uniform distribution in color space depending on cls_dict 
     """
     return [
         [0, 0, 0],      # Background (BLACK)

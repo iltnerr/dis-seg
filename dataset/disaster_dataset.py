@@ -2,16 +2,18 @@ import os
 import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset
+import albumentations as A
+import torch
 
 
 class DisasterSegDataset(Dataset):
     """Semantic Image Segmentation Dataset."""
 
-    def __init__(self, root_dir, preprocessor, train=True, transforms=None):
+    def __init__(self, root_dir, preprocessor, train=False):
         self.root_dir = root_dir
         self.preprocessor = preprocessor
         self.train = train
-        self.transforms = transforms
+        self.transform = self.augment()
 
         sub_path = "train" if self.train else "valid"
         self.img_dir = os.path.join(self.root_dir, "images", sub_path)
@@ -43,16 +45,44 @@ class DisasterSegDataset(Dataset):
         image = Image.open(os.path.join(self.img_dir, self.images[idx]))
         segmentation_map = Image.open(os.path.join(self.ann_dir, self.annotations[idx]))
 
-        # TODO: Check augmentations
-        if self.transforms:
-            data = self.transforms(image=np.array(image), mask=np.array(segmentation_map))
-            # randomly crop + pad both image and segmentation map to same size
-            encoded_inputs = self.preprocessor(data['image'], data['mask'], return_tensors="pt")
-
+        if self.train:
+            augmented = self.transform(image=np.array(image), mask=np.array(segmentation_map))
+            data = self.preprocessor(augmented['image'], augmented['mask'], return_tensors="pt")
         else:
-            encoded_inputs = self.preprocessor(image, segmentation_map, return_tensors="pt")
+            data = self.preprocessor(image, segmentation_map, return_tensors="pt")
 
-        for k,v in encoded_inputs.items():
-            encoded_inputs[k].squeeze_()  # remove batch dimension
+        for k in data.keys():
+            data[k] = torch.squeeze(data[k], dim=0) # remove batch dimension
 
-        return encoded_inputs
+        return data
+    
+    def augment(self):
+        """
+        On-the-Fly augmentations to increase training dataset size artificially. 
+        """
+        return A.Compose([
+            A.HorizontalFlip(p=0.5),
+            A.ShiftScaleRotate(
+                shift_limit=0.4,
+                rotate_limit=(-25, 25), border_mode=0,
+                shift_limit_x=0.2,
+                shift_limit_y=0.2),
+            A.RandomBrightnessContrast(brightness_limit=(-0.3, 0.5), contrast_limit=0.7, p=0.5),
+            A.HueSaturationValue(
+                hue_shift_limit=(-10, 10),
+                sat_shift_limit=(-180, 50),
+                val_shift_limit=0,
+                p=0.5),
+            A.RandomToneCurve(p=0.2),
+            A.ISONoise(p=0.1),
+            A.OneOf([
+                A.MedianBlur(blur_limit=5, p=0.5),
+                A.GaussianBlur(blur_limit=5, p=0.5)
+            ], p=0.1),
+            A.ImageCompression(quality_lower=35, p=0.3),
+            A.Perspective(scale=(0.05, 0.13), p=0.1),
+            A.Cutout(num_holes=8, max_h_size=40, max_w_size=40, p=0.05),
+            A.LongestMaxSize(max_size=512, p=1),
+            A.PadIfNeeded(512, 512, border_mode=0, p=1),
+        ],
+            p=1.0)

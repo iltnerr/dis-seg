@@ -12,7 +12,7 @@ from utils.misc import initialize_session, save_checkpoint, log_metrics, log_tra
 from utils.visualization import plot_curves
 from utils.early_stopper import EarlyStopper
 
-from dataset.dataset_utils import cls_dict, get_augmentations
+from dataset.dataset_utils import cls_dict
 from dataset.disaster_dataset import DisasterSegDataset
 
 from torchmetrics import JaccardIndex, Accuracy
@@ -35,14 +35,12 @@ def main():
     train_dataset = DisasterSegDataset(
         root_dir=common_paths["dataset_root"],
         preprocessor=preprocessor,
-        train=True,
-        transforms=get_augmentations(mode='train'),
+        train=True
     )
     valid_dataset = DisasterSegDataset(
         root_dir=common_paths["dataset_root"],
         preprocessor=preprocessor,
-        train=False,
-        transforms=None,
+        train=False
     )
 
     # Use subsets for testing
@@ -71,7 +69,7 @@ def main():
     early_stopper = EarlyStopper(patience=cfg['early_stop_patience'], min_delta=cfg['early_stop_min_delta'])
 
     # Continue training or start from scratch
-    """ TODO: this may be necessary once training is conducted with more data
+    """ may be necessary once training is conducted with more data
     if cfg['continue']:
         start_epoch = ...
         ...
@@ -106,7 +104,7 @@ def main():
 
         model.train()
 
-        for idx, batch in enumerate(pbar):
+        for batch in pbar:
             # Get inputs
             pixel_values = batch["pixel_values"].to(device)
             labels = batch["labels"].to(device)
@@ -134,12 +132,12 @@ def main():
             train_loss_batch.backward()
             optimizer.step()
 
-        else: # TODO: is there a better way?
+        else:
             model.eval()
 
             with torch.no_grad():
 
-                for idx, batch in enumerate(valid_dataloader):
+                for batch in valid_dataloader:
                     pixel_values = batch["pixel_values"].to(device)
                     labels = batch["labels"].to(device)
 
@@ -175,7 +173,6 @@ def main():
             Val MIoU: {val_miou:.4f}"
         )
     
-        # TODO: logger class
         log_metrics(epoch, train_accuracy, train_loss, train_miou, val_accuracy, val_loss, val_miou,
                             logs_path=log_dir + "/logs.csv")
         

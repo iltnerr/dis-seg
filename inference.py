@@ -55,6 +55,5 @@ with torch.no_grad():
 
         print(f"Predicted Class IDs: {torch.unique(preds)}")
 
-        plot_compare_predictions(img=img, preds=preds, label2id=label2id, gt_map=gt_map,
-                                alpha_img=0.7)
+        plot_compare_predictions(img=img, preds=preds, label2id=label2id, gt_map=gt_map, alpha_img=0.7)
 exit()

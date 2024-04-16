@@ -1,5 +1,5 @@
-import albumentations as A
-
+import numpy as np
+from PIL.Image import fromarray
 
 cls_dict = {
     0: 'Background',
@@ -16,40 +16,13 @@ cls_dict = {
     11: 'Tree',
     12: 'Person'
 }
+
+def pixel_values_to_pil_image(pixel_values):
+    np_arr = np.array(pixel_values)
+    reordered = np.moveaxis(np_arr, 0, -1)
+    rescaled = ((reordered - reordered.min()) * (1/(reordered.max() - reordered.min()) * 255)).astype('uint8')
+    return fromarray(rescaled)
         
 
-def get_augmentations(mode='train'):
-    """
-    On-the-Fly augmentations to increase training dataset size artificially. 
-    """
-    if mode == 'train':
-        return A.Compose([
-            A.HorizontalFlip(p=0.5),
-            A.ShiftScaleRotate(
-                shift_limit=0.4,
-                rotate_limit=(-25, 25), border_mode=0,
-                shift_limit_x=0.2,
-                shift_limit_y=0.2),
-            A.RandomBrightnessContrast(brightness_limit=(-0.3, 0.5), contrast_limit=0.7, p=0.5),
-            A.HueSaturationValue(
-                hue_shift_limit=(-10, 10),
-                sat_shift_limit=(-180, 50),
-                val_shift_limit=0,
-                p=0.5),
-            A.RandomToneCurve(p=0.2),
-            A.ISONoise(p=0.1),
-            A.OneOf([
-                A.MedianBlur(blur_limit=5, p=0.5),
-                A.GaussianBlur(blur_limit=5, p=0.5)
-            ], p=0.1),
-            A.ImageCompression(quality_lower=35, p=0.3),
-            A.Perspective(scale=(0.05, 0.13), p=0.1),
-            A.Cutout(num_holes=8, max_h_size=40, max_w_size=40, p=0.05),
-            A.LongestMaxSize(max_size=512, p=1),
-            A.PadIfNeeded(512, 512, border_mode=0, p=1),
-        ],
-            p=1.0)
 
-    elif mode == 'val':
-        return None
 

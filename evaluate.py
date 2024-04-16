@@ -19,8 +19,7 @@ preprocessor = SegformerImageProcessor()
 valid_dataset = DisasterSegDataset(
     root_dir=common_paths["dataset_root"],
     preprocessor=preprocessor,
-    train=False,
-    transforms=None,
+    train=False
 )
 
 valid_dataloader = DataLoader(valid_dataset, batch_size=cfg['batch_size'])
@@ -42,7 +41,7 @@ jaccard = JaccardIndex(task='multiclass', num_classes=len(cls_dict), ignore_inde
 accuracy = Accuracy(task="multiclass", num_classes=len(cls_dict), ignore_index=0)
 
 with torch.no_grad():
-    for idx, batch in enumerate(pbar):
+    for batch in pbar:
         pixel_values = batch["pixel_values"].to(device)
         labels = batch["labels"].to(device)
 
