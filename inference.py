@@ -21,7 +21,6 @@ label2id = {v: k for k, v in cls_dict.items()}
 preprocessor = SegformerImageProcessor()
 
 model = load_segformer(config_path=common_paths['segformer_config_path'], id2label=cls_dict, label2id=label2id)
-
 checkpoint = torch.load(common_paths['checkpoint_load_path'], map_location='cpu')
 model.load_state_dict(checkpoint['model_state_dict'], strict=True)
 device = torch.device('cuda' if torch.cuda.is_available() and not cfg['is_office'] else 'cpu')
@@ -30,7 +29,7 @@ model.eval()
 
 # Plot results for random images
 val_images = os.listdir(img_dir)
-#random.shuffle(val_images)
+random.shuffle(val_images)
 
 with torch.no_grad():
     for image_file in val_images:
@@ -56,4 +55,3 @@ with torch.no_grad():
         print(f"Predicted Class IDs: {torch.unique(preds)}")
 
         plot_compare_predictions(img=img, preds=preds, label2id=label2id, gt_map=gt_map, alpha_img=0.7)
-exit()

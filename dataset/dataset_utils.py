@@ -23,6 +23,7 @@ def pixel_values_to_pil_image(pixel_values):
     rescaled = ((reordered - reordered.min()) * (1/(reordered.max() - reordered.min()) * 255)).astype('uint8')
     return fromarray(rescaled)
         
-
+def get_position_for_class(annotation):
+    return
 
 
