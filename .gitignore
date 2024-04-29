@@ -3,10 +3,10 @@ __pycache__
 */__pycache__
 
 GroundingDINO/*
-!GroundingDINO/groundingdino/
+!GroundingDINO/groundingdino
 
 segment_anything/*
-!segment_anything/segment_anything/
+!segment_anything/segment_anything
 
 utils/common.py
 testing.py
