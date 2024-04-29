@@ -19,7 +19,8 @@ preprocessor = SegformerImageProcessor()
 valid_dataset = DisasterSegDataset(
     root_dir=common_paths["dataset_root"],
     preprocessor=preprocessor,
-    train=False
+    train=False,
+    augment_data=False
 )
 
 valid_dataloader = DataLoader(valid_dataset, batch_size=cfg['batch_size'])
@@ -28,7 +29,6 @@ pbar = tqdm(valid_dataloader,
 
 # Model
 model = load_segformer(config_path=common_paths['segformer_config_path'], id2label=cls_dict, label2id={v: k for k, v in cls_dict.items()})
-
 checkpoint = torch.load(common_paths['checkpoint_load_path'], map_location='cpu')
 model.load_state_dict(checkpoint['model_state_dict'])
 device = torch.device('cuda' if torch.cuda.is_available() and not cfg['is_office'] else 'cpu')

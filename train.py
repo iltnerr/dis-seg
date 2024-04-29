@@ -35,12 +35,14 @@ def main():
     train_dataset = DisasterSegDataset(
         root_dir=common_paths["dataset_root"],
         preprocessor=preprocessor,
-        train=True
+        train=True,
+        augment_data=cfg['use_augmentation'],
     )
     valid_dataset = DisasterSegDataset(
         root_dir=common_paths["dataset_root"],
         preprocessor=preprocessor,
-        train=False
+        train=False,
+        augment_data=False
     )
 
     # Use subsets for testing
@@ -82,6 +84,7 @@ def main():
                      cfg={"Session ID": session_id,
                           "Train Dataset Size": len(train_dataset),
                           "Val Dataset Size": len(valid_dataset),
+                          "Augment Training Data": cfg['use_augmentation'],
                           "Batch Size": cfg['batch_size'],
                           "Using Device": str(device),
                           "Max Epochs": cfg['max_epochs'],
@@ -113,7 +116,7 @@ def main():
             optimizer.zero_grad()
             outputs = model(pixel_values=pixel_values, labels=labels)
 
-            # Get Predictions
+            # Get Predictions TODO: Review upsamling: Could have an impact on sharpness of predictions
             upsampled_logits = torch.nn.functional.interpolate(
                 outputs.logits,
                 size=labels.shape[-2:],

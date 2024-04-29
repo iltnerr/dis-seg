@@ -12,4 +12,5 @@ default_cfg = {
     'lr': 1e-5,
     'max_epochs': 1000 if not is_office else 3,
     'update_checkpoint_frequency': 20 if not is_office else 2, # best checkpoint is saved independently of this setting
+    'use_augmentation': False,
 }

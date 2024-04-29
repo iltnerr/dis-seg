@@ -30,7 +30,7 @@ model.eval()
 
 # Plot results for random images
 val_images = os.listdir(img_dir)
-random.shuffle(val_images)
+#random.shuffle(val_images)
 
 with torch.no_grad():
     for image_file in val_images:
@@ -47,10 +47,10 @@ with torch.no_grad():
         pixel_values = encoding.pixel_values.to(device)
         outputs = model(pixel_values=pixel_values)
         logits = outputs.logits.cpu()
-        upsampled_logits = torch.nn.functional.interpolate(logits, # TODO: Review upsamling: Could have an impact on sharpness of predictions
-                        size=img.size[::-1],  # (H,W)
-                        mode='bilinear',
-                        align_corners=False)
+        upsampled_logits = torch.nn.functional.interpolate(logits,
+                                                           size=img.size[::-1],  # (H,W)
+                                                           mode='bilinear',
+                                                           align_corners=False)
         preds = torch.sigmoid(upsampled_logits).argmax(dim=1)[0]
 
         print(f"Predicted Class IDs: {torch.unique(preds)}")

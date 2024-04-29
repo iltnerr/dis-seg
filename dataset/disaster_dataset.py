@@ -9,10 +9,11 @@ import torch
 class DisasterSegDataset(Dataset):
     """Semantic Image Segmentation Dataset."""
 
-    def __init__(self, root_dir, preprocessor, train=False):
+    def __init__(self, root_dir, preprocessor, train=False, augment_data=False):
         self.root_dir = root_dir
         self.preprocessor = preprocessor
         self.train = train
+        self.augment_data = augment_data
         self.transform = self.augment()
 
         sub_path = "train" if self.train else "valid"
@@ -45,7 +46,7 @@ class DisasterSegDataset(Dataset):
         image = Image.open(os.path.join(self.img_dir, self.images[idx]))
         segmentation_map = Image.open(os.path.join(self.ann_dir, self.annotations[idx]))
 
-        if self.train:
+        if self.augment_data:
             augmented = self.transform(image=np.array(image), mask=np.array(segmentation_map))
             data = self.preprocessor(augmented['image'], augmented['mask'], return_tensors="pt")
         else:
@@ -81,7 +82,6 @@ class DisasterSegDataset(Dataset):
             ], p=0.1),
             A.ImageCompression(quality_lower=35, p=0.3),
             A.Perspective(scale=(0.05, 0.13), p=0.1),
-            A.Cutout(num_holes=8, max_h_size=40, max_w_size=40, p=0.05),
             A.LongestMaxSize(max_size=512, p=1),
             A.PadIfNeeded(512, 512, border_mode=0, p=1),
         ],
