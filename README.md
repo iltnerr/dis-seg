@@ -31,5 +31,4 @@
 ## Acknowledgements
 
 - [SegFormer](https://github.com/NVlabs/SegFormer)
-- [Segment Anything](https://github.com/facebookresearch/segment-anything)
-- [Grounding DINO](https://github.com/IDEA-Research/GroundingDINO)
+- [Grounded-Segment-Anything](https://github.com/IDEA-Research/Grounded-Segment-Anything)
