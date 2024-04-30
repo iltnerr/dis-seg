@@ -9,11 +9,6 @@ from matplotlib.patches import Patch
 def color_palette():
     """
     Color palette that maps each class to BGR values.
-
-    Note on 'Injured_Person' and 'Person' classes:
-    Originally, injured and healthy people were distinguished and annotated as different classes. 
-    However, with a too small dataset, this does not work out. Therefore, these are considered as same classes for now (same color in visualizations).
-    
     TODO: uniform distribution in color space depending on cls_dict 
     """
     return [
@@ -25,8 +20,6 @@ def color_palette():
         [255, 0, 255],  # Fire (MAGENTA)
         [0, 255, 255],  # Water (CYAN)
         [128, 0, 0],    # Animal (MAROON)
-        #[0, 128, 0],    # Injured_Person (OLIVE)
-        [0, 0, 128],    # Injured_Person (Same color as 'Person', see above)
         [128, 128, 128],# Sky (GRAY)
         [128, 0, 128],  # Smoke (PURPLE)
         [0, 128, 128],  # Tree (TEAL)
@@ -81,8 +74,7 @@ def plot_compare_predictions(img, preds, label2id, gt_map=None, alpha_img=0.5):
         axes[idx].axis('off')
 
     # Legend
-    legend_elements = [Patch(facecolor=(color[::-1] / 255), label=cls_name) for [cls_name, color] in zip(label2id.keys(), palette)]
-    del legend_elements[8] # remove entry for 'Injured_Person' class
+    legend_elements = create_legend(label2id=label2id, palette=palette)
     axes[4].legend(handles=legend_elements, ncol=4, loc='center', bbox_to_anchor=(0.5, 0.5))
     axes[4].axis('off')
     plt.show()    
@@ -185,8 +177,7 @@ def plot_compare_annotations(img, masks_manual, masks_gsam, label2id, alpha_img=
         axes[idx].axis('off')
 
     # Legend
-    legend_elements = [Patch(facecolor=(color[::-1] / 255), label=cls_name) for [cls_name, color] in zip(label2id.keys(), palette)]
-    del legend_elements[8] # remove entry for 'Injured_Person' class
+    legend_elements = create_legend(label2id=label2id, palette=palette)
     axes[4].legend(handles=legend_elements, ncol=4, loc='center', bbox_to_anchor=(0.5, 0.5))
     axes[4].axis('off')
 
@@ -253,8 +244,11 @@ def visualize_augmentations(img, masks, aug_image, aug_masks, label2id, alpha_im
         axes[idx].axis('off')
 
     # Legend
-    legend_elements = [Patch(facecolor=(color[::-1] / 255), label=cls_name) for [cls_name, color] in zip(label2id.keys(), palette)]
-    del legend_elements[8] # remove entry for 'Injured_Person' class
+    legend_elements = create_legend(label2id=label2id, palette=palette)
     axes[6].legend(handles=legend_elements, ncol=4, loc='center', bbox_to_anchor=(0.5, 0.5))
     axes[6].axis('off')
     plt.show()
+
+def create_legend(label2id, palette):
+    return [Patch(facecolor=(color[::-1] / 255), label=cls_name) for [cls_name, color] in zip(label2id.keys(), palette)]
+

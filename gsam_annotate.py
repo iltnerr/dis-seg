@@ -18,7 +18,7 @@ SAVE_OUTPUTS_BOXES = False
 SAVE_OUTPUTS_MASKS = True
 SAVE_OUTPUTS_MASKS_RGB = False
 
-grounding_dino_model, sam_predictor, box_annotator, mask_annotator = initialize(use_sam_hq=False)
+grounding_dino_model, sam_predictor, box_annotator, mask_annotator, label_annotator = initialize(use_sam_hq=False)
 
 image_list = os.listdir(images_dir)
 pbar = tqdm(image_list)
@@ -30,7 +30,7 @@ for img_file in pbar:
 
     # predictions
     detections, frame_boxes = run_gdino(grounding_dino_model, image, BOX_THRESHOLD, TEXT_THRESHOLD, box_annotator)
-    class_ids, masks, frame_masks = run_sam(sam_predictor, detections, NMS_THRESHOLD, image, box_annotator, mask_annotator)
+    class_ids, masks, frame_masks = run_sam(sam_predictor, detections, NMS_THRESHOLD, image, box_annotator, mask_annotator, label_annotator)
 
     masks_by_id = np.array([class_id*mask for class_id, mask in zip(class_ids, masks)]).max(axis=0)
 

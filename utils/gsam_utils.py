@@ -5,68 +5,43 @@ import seaborn as sns
 import supervision as sv
 import cv2
 
+from dataset.dataset_utils import cls_dict
 from utils.common import gsam_paths
+from utils.visualization import color_palette
+
 
 from groundingdino.util.inference import Model
 from segment_anything import sam_model_registry, sam_hq_model_registry, SamPredictor
 
 
-cls_dict = {
-    0: 'Background',
-    1: 'Building',
-    2: 'Road',
-    3: 'Vehicle',
-    4: 'Debris',
-    5: 'Fire',
-    6: 'Water',
-    7: 'Animal',
-    8: 'Injured_Person', # Keeping this class for convenience, since it is part of the annotations. With a small dataset it does not make sense to distinguish healthy and injured persons, however.
-    9: 'Sky',
-    10: 'Smoke',
-    11: 'Tree',
-    12: 'Person'
-}
-
-CLASSES = ["Background", "Building", "Road", "Vehicle", "Debris", "Fire", "Water", "Animal", "Snow", # snow==injured_person
-           "Sky", "Smoke", "Tree", "Person"]
- 
+CLASSES = cls_dict.keys()
 palette = sns.color_palette("husl", len(CLASSES))
 colors_rgb =[(r, g, b) for r, g, b in palette]
-CLASS_COLORS = dict(zip(CLASSES, colors_rgb)) # unique, distinct class colors (r,g,b,a)
-CLASS_COLORS = [
-        [0, 0, 0],     
-        [255, 0, 0],    
-        [0, 255, 0],    
-        [0, 0, 255],   
-        [255, 255, 0],  
-        [255, 0, 255],  
-        [0, 255, 255],  
-        [128, 0, 0],    
-        [0, 128, 0],    
-        [128, 128, 128],
-        [128, 0, 128],  
-        [0, 128, 128], 
-        [0, 0, 128]     
-    ]
+CLASS_COLORS = dict(zip(CLASSES, colors_rgb)) # unique, distinct (r,g,b) class colors 
+
+CLASS_COLORS = color_palette() # Keep the fixed color palette for now.
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 def initialize(use_sam_hq=True):
-    # Building GroundingDINO inference model
+    # initialize models and annotators
     grounding_dino_model = Model(model_config_path=gsam_paths['gdino_config'], model_checkpoint_path=gsam_paths['gdino_ckpt'])
 
-    # Building SAM Model and SAM Predictor
     if use_sam_hq:
         sam = sam_hq_model_registry["vit_h"](checkpoint=gsam_paths['samhq_ckpt'])
     else:
         sam = sam_model_registry["vit_h"](checkpoint=gsam_paths['sam_ckpt'])
+
     sam.to(device=DEVICE)
     sam_predictor = SamPredictor(sam)
 
-    box_annotator = sv.BoxAnnotator(color=sv.ColorPalette(colors=[sv.Color(r=b, g=g, b=r) for r, g, b in CLASS_COLORS]))
-    mask_annotator = sv.MaskAnnotator(color=sv.ColorPalette(colors=[sv.Color(r=b, g=g, b=r) for r, g, b in CLASS_COLORS])) 
-    return grounding_dino_model, sam_predictor, box_annotator, mask_annotator
+    # annotator classes
+    cp = sv.ColorPalette(colors=[sv.Color(r=b, g=g, b=r) for r, g, b in CLASS_COLORS])
+    box_annotator = sv.BoxAnnotator(color=cp)
+    mask_annotator = sv.MaskAnnotator(color=cp) 
+    label_annotator = sv.LabelAnnotator(color=cp, text_position=sv.Position.CENTER)
+    return grounding_dino_model, sam_predictor, box_annotator, mask_annotator, label_annotator
 
 def run_gdino(grounding_dino_model, image, BOX_THRESHOLD, TEXT_THRESHOLD, box_annotator, verbose=False):
     # detect objects
@@ -100,7 +75,7 @@ def segment(sam_predictor: SamPredictor, image: np.ndarray, xyxy: np.ndarray) ->
         result_masks.append(masks[index])
     return np.array(result_masks)
 
-def run_sam(sam_predictor, detections, NMS_THRESHOLD, image, box_annotator, mask_annotator, show_boxes=False, verbose=False):
+def run_sam(sam_predictor, detections, NMS_THRESHOLD, image, box_annotator, mask_annotator, label_annotator, show_boxes=False, verbose=False):
     # NMS post process
     if verbose:
         print(f"Before NMS: {len(detections.xyxy)} boxes")
@@ -139,6 +114,5 @@ def run_sam(sam_predictor, detections, NMS_THRESHOLD, image, box_annotator, mask
     if show_boxes:
         annotated_image = box_annotator.annotate(scene=annotated_image, detections=detections, labels=labels)
 
-    label_annotator = sv.LabelAnnotator(text_position=sv.Position.CENTER, color=sv.ColorPalette(colors=[sv.Color(r=b, g=g, b=r) for r, g, b in CLASS_COLORS]))
     annotated_image = label_annotator.annotate(scene=annotated_image, detections=detections, labels=labels)
     return detections.class_id, detections.mask, annotated_image

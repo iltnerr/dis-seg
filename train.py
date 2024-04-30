@@ -1,3 +1,4 @@
+import os
 import torch
 import datetime
 import uuid
@@ -22,6 +23,8 @@ from configs.train_cfg import default_cfg
 
 def main():
     cfg = default_cfg
+    if cfg['expand_pytorch_alloc_mem']:
+        os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
     device = torch.device("cuda" if torch.cuda.is_available() and not cfg['is_office'] else "cpu")
 
     # Create directories for this session
@@ -52,7 +55,7 @@ def main():
 
     train_dataloader = DataLoader(train_dataset, batch_size=cfg['batch_size'], shuffle=True)
     valid_dataloader = DataLoader(valid_dataset, batch_size=cfg['batch_size'])
-
+   
     # Model
     model = load_segformer(config_path=common_paths['segformer_config_path'], 
                            id2label=cls_dict, 
@@ -82,6 +85,7 @@ def main():
 
     log_train_config(log_dir=log_dir,
                      cfg={"Session ID": session_id,
+                          "Dataset": common_paths['dataset_root'],
                           "Train Dataset Size": len(train_dataset),
                           "Val Dataset Size": len(valid_dataset),
                           "Augment Training Data": cfg['use_augmentation'],
@@ -155,7 +159,7 @@ def main():
 
                     # Get val metrics for one batch
                     val_loss_batch = outputs.loss
-                    val_losses.append(val_loss_batch.item())
+                    val_losses.append(val_loss_batch.item()) 
                     val_jaccard(predicted, labels)
                     val_pw_acc(predicted, labels)
 
