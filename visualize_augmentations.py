@@ -1,10 +1,10 @@
+from torch.utils.data import DataLoader
+from transformers import SegformerImageProcessor
+
+from configs.train_cfg import default_cfg
+from dataset.dataset_utils import cls_dict, pixel_values_to_pil_image
 from dataset.disaster_dataset import DisasterSegDataset
 from utils.common import common_paths
-from transformers import SegformerImageProcessor
-from torch.utils.data import DataLoader
-from configs.train_cfg import default_cfg
-from dataset.dataset_utils import cls_dict
-from dataset.dataset_utils import pixel_values_to_pil_image
 from utils.visualization import visualize_augmentations
 
 

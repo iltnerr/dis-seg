@@ -1,27 +1,28 @@
+import cv2
 import os
 import random
-import cv2
 import torch
+
 from PIL import Image
-
-from dataset.dataset_utils import cls_dict
-from configs.infer_cfg import default_cfg
-from utils.common import common_paths
 from transformers import SegformerImageProcessor
-from models.load_models import load_segformer
 
+from configs.infer_cfg import default_cfg
+from dataset.dataset_utils import cls_dict
+from models.load_models import load_segformer
+from utils.common import common_paths
 from utils.visualization import plot_compare_predictions
 
 
 cfg = default_cfg
 img_dir = common_paths['dataset_root'] + 'images/valid/'
+anns = 'annotations-gsamhq'
 
 # Model
 label2id = {v: k for k, v in cls_dict.items()}
 preprocessor = SegformerImageProcessor()
 
 model = load_segformer(config_path=common_paths['segformer_config_path'], id2label=cls_dict, label2id=label2id)
-checkpoint = torch.load(common_paths['checkpoint_load_path'], map_location='cpu')
+checkpoint = torch.load(common_paths[cfg['checkpoint']], map_location='cpu')
 model.load_state_dict(checkpoint['model_state_dict'], strict=True)
 device = torch.device('cuda' if torch.cuda.is_available() and not cfg['is_office'] else 'cpu')
 model.to(device) 
@@ -37,7 +38,7 @@ with torch.no_grad():
         print(fp)
         
         # Get GT if file exists, else gt_map is None and will be black in the viz.
-        gt_path = fp.replace('images', 'annotations').replace('.jpg', '_mask.png')
+        gt_path = fp.replace('images', anns).replace('.jpg', '_mask.png')
         gt_map = cv2.imread(gt_path, cv2.IMREAD_GRAYSCALE)
 
         # Predict

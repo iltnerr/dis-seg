@@ -9,8 +9,14 @@ from matplotlib.patches import Patch
 def color_palette():
     """
     Color palette that maps each class to BGR values.
-    TODO: uniform distribution in color space depending on cls_dict 
+    
+    TODO: uniform distribution in color space depending on cls_dict:
+    CLASSES = list(cls_dict.values())
+    palette = sns.color_palette("husl", len(CLASSES))
+    colors_rgb = [(r, g, b) for r, g, b in palette]
+    CLASS_COLORS = dict(zip(CLASSES, colors_rgb)) # unique, distinct (r,g,b) class colors 
     """
+
     return [
         [0, 0, 0],      # Background (BLACK)
         [255, 0, 0],    # Building (BLUE)

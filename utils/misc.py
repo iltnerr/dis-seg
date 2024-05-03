@@ -24,22 +24,6 @@ def initialize_session(local_dir, session_id):
                 val_miou=None,
                 logs_path=log_dir + "/logs.csv")
 
-
-def load_checkpoint(cfg, model, optimizer):
-    
-    checkpoint = torch.load(cfg['checkpoint_load_path'])
-    model.load_state_dict(checkpoint['model_state_dict'])
-    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-    start_epoch = checkpoint['epoch']
-    loss = checkpoint['loss']
-    val_iou_per_class = checkpoint['val_iou_per_class']
-
-    print(f"Loaded checkpoint: {cfg['checkpoint_load_path']}")
-    print(f"Start epoch: {start_epoch}")
-    print(f"Loss: {loss}")
-
-    return model, optimizer, start_epoch, loss, val_iou_per_class
-
 def save_checkpoint(epoch, model_state_dict, optimizer_state_dict, checkpoint_path):   
     torch.save({
         'epoch': epoch,

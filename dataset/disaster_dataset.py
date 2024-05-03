@@ -59,7 +59,8 @@ class DisasterSegDataset(Dataset):
     
     def augment(self):
         """
-        On-the-Fly augmentations to increase training dataset size artificially. 
+        Dynamic augmentations to increase training dataset size artificially. 
+        Based on 'image' and 'mask' keywords to the function call, some transformations are applied to both, inputs and targets, while others are only applied to inputs.
         """
         return A.Compose([
             A.HorizontalFlip(p=0.5),

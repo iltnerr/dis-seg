@@ -1,14 +1,15 @@
 import torch
-from tqdm import tqdm
 
 from torch.utils.data import DataLoader
+from torchmetrics import JaccardIndex, Accuracy
+from tqdm import tqdm
 from transformers import SegformerImageProcessor
-from models.load_models import load_segformer
-from utils.common import common_paths
+
 from configs.infer_cfg import default_cfg
 from dataset.dataset_utils import cls_dict
 from dataset.disaster_dataset import DisasterSegDataset
-from torchmetrics import JaccardIndex, Accuracy
+from models.load_models import load_segformer
+from utils.common import common_paths
 
 
 cfg = default_cfg
@@ -29,7 +30,7 @@ pbar = tqdm(valid_dataloader,
 
 # Model
 model = load_segformer(config_path=common_paths['segformer_config_path'], id2label=cls_dict, label2id={v: k for k, v in cls_dict.items()})
-checkpoint = torch.load(common_paths['checkpoint_load_path'], map_location='cpu')
+checkpoint = torch.load(common_paths[cfg['checkpoint']], map_location='cpu')
 model.load_state_dict(checkpoint['model_state_dict'])
 device = torch.device('cuda' if torch.cuda.is_available() and not cfg['is_office'] else 'cpu')
 model.to(device)

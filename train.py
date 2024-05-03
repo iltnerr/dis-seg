@@ -1,30 +1,30 @@
+import datetime
+import multiprocessing
 import os
 import torch
-import datetime
 import uuid
-from tqdm import tqdm
 
 from torch.utils.data import DataLoader, Subset
-from transformers import SegformerImageProcessor
-from models.load_models import load_segformer
-
-from utils.common import common_paths
-from utils.misc import initialize_session, save_checkpoint, log_metrics, log_train_config, delete_old_checkpoint
-from utils.visualization import plot_curves
-from utils.early_stopper import EarlyStopper
-
-from dataset.dataset_utils import cls_dict
-from dataset.disaster_dataset import DisasterSegDataset
-
 from torchmetrics import JaccardIndex, Accuracy
+from tqdm import tqdm
+from transformers import SegformerImageProcessor
 
 from configs.train_cfg import default_cfg
+from dataset.dataset_utils import cls_dict
+from dataset.disaster_dataset import DisasterSegDataset
+from models.load_models import load_segformer
+from utils.common import common_paths
+from utils.early_stopper import EarlyStopper
+from utils.misc import initialize_session, save_checkpoint, log_metrics, log_train_config, delete_old_checkpoint
+from utils.visualization import plot_curves
 
 
 def main():
     cfg = default_cfg
     if cfg['expand_pytorch_alloc_mem']:
         os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+
+    num_cpus = multiprocessing.cpu_count()
     device = torch.device("cuda" if torch.cuda.is_available() and not cfg['is_office'] else "cpu")
 
     # Create directories for this session
@@ -53,8 +53,8 @@ def main():
         train_dataset = Subset(train_dataset, torch.arange(0,6))
         valid_dataset = Subset(train_dataset, torch.arange(0,2))
 
-    train_dataloader = DataLoader(train_dataset, batch_size=cfg['batch_size'], shuffle=True)
-    valid_dataloader = DataLoader(valid_dataset, batch_size=cfg['batch_size'])
+    train_dataloader = DataLoader(train_dataset, batch_size=cfg['batch_size'], num_workers=num_cpus, shuffle=True)
+    valid_dataloader = DataLoader(valid_dataset, batch_size=cfg['batch_size'], num_workers=num_cpus)
    
     # Model
     model = load_segformer(config_path=common_paths['segformer_config_path'], 

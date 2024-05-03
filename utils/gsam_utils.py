@@ -1,30 +1,33 @@
+import cv2
 import numpy as np
-import torch
-import torchvision
+import os
 import seaborn as sns
 import supervision as sv
-import cv2
+import torch
+import torchvision
 
 from dataset.dataset_utils import cls_dict
 from utils.common import gsam_paths
 from utils.visualization import color_palette
 
-
 from groundingdino.util.inference import Model
 from segment_anything import sam_model_registry, sam_hq_model_registry, SamPredictor
 
 
-CLASSES = cls_dict.keys()
-palette = sns.color_palette("husl", len(CLASSES))
-colors_rgb =[(r, g, b) for r, g, b in palette]
-CLASS_COLORS = dict(zip(CLASSES, colors_rgb)) # unique, distinct (r,g,b) class colors 
-
+CLASSES = list(cls_dict.values())
 CLASS_COLORS = color_palette() # Keep the fixed color palette for now.
-
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
-def initialize(use_sam_hq=True):
+def initialize(input_dir, out_dir, logfile, use_sam_hq=True):
+    # mirror input_dir structure to out_dir
+    for directory in os.listdir(input_dir):
+        os.makedirs(out_dir+'masks/'+directory, exist_ok=True)
+
+    # log file for images without any detections
+    if os.path.exists(out_dir+logfile):
+        raise FileExistsError("Log file already exists. Create a new one for this session.")
+
     # initialize models and annotators
     grounding_dino_model = Model(model_config_path=gsam_paths['gdino_config'], model_checkpoint_path=gsam_paths['gdino_ckpt'])
 
