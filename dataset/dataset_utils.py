@@ -1,6 +1,7 @@
 import numpy as np
 import os
 
+from PIL import Image
 from PIL.Image import fromarray
 from tqdm import tqdm
 
@@ -26,7 +27,7 @@ def pixel_values_to_pil_image(pixel_values):
     rescaled = ((reordered - reordered.min()) * (1/(reordered.max() - reordered.min()) * 255)).astype('uint8')
     return fromarray(rescaled)
 
-def check_dataset(ds):
+def check_dataset(ds, log_errors=False, try_main_fn=False):
     """
     Check dataset for errors after annotation with gsam. 
     """
@@ -34,18 +35,24 @@ def check_dataset(ds):
     for idx in pbar:
         img_fname = ds.images[idx]
         ann_fname = ds.annotations[idx]
+
+        # try to get image and annotation
         try:
-            ds.__getitem__(idx)
+            if try_main_fn:
+                ds.__getitem__(idx) # main function for loading data
+            else:
+                # call specific functions from the __getitem__() method for closer investigation 
+                image = Image.open(os.path.join(ds.img_dir, img_fname))
+                image = image.convert('RGB')
+                segmentation_map = Image.open(os.path.join(ds.ann_dir, ann_fname))
+
         except Exception as e:
             errmsg = f"idx {idx}:{ds.img_dir}/{img_fname}: {e}"
-            print(errmsg)      
+            print(errmsg)
 
-            with open('errors.txt', 'a') as f:
-                f.write(f"{errmsg}\n")
-
-            # Keep these for debugging
-            #image = Image.open(os.path.join(ds.img_dir, img_fname))
-            #segmentation_map = Image.open(os.path.join(ds.ann_dir, ann_fname))
+            if log_errors:
+                with open('errors.txt', 'a') as f:
+                    f.write(f"{errmsg}\n")
             continue
 
 def clean_dataset(errorfile, dry=True):

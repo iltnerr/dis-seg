@@ -3,6 +3,7 @@ import multiprocessing
 import os
 import torch
 import uuid
+import warnings
 
 from torch.utils.data import DataLoader, Subset
 from torchmetrics import JaccardIndex, Accuracy
@@ -19,12 +20,15 @@ from utils.misc import initialize_session, save_checkpoint, log_metrics, log_tra
 from utils.visualization import plot_curves
 
 
+warnings.filterwarnings("ignore", message='Palette images with Transparency expressed in bytes should be converted to RGBA images')
+
+
 def main():
     cfg = default_cfg
     if cfg['expand_pytorch_alloc_mem']:
         os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
-    num_cpus = multiprocessing.cpu_count()
+    num_cpus = min(4, multiprocessing.cpu_count())
     device = torch.device("cuda" if torch.cuda.is_available() and not cfg['is_office'] else "cpu")
 
     # Create directories for this session
@@ -112,7 +116,6 @@ def main():
         model.train()
 
         for batch in pbar:
-            # Get inputs
             pixel_values = batch["pixel_values"].to(device)
             labels = batch["labels"].to(device)
 
@@ -142,9 +145,13 @@ def main():
         else:
             model.eval()
 
+            pbar = tqdm(valid_dataloader,
+                        bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]"
+                        )
+
             with torch.no_grad():
 
-                for batch in valid_dataloader:
+                for batch in pbar:
                     pixel_values = batch["pixel_values"].to(device)
                     labels = batch["labels"].to(device)
 

@@ -1,6 +1,5 @@
 import argparse
 
-from PIL import Image
 from transformers import SegformerImageProcessor
 
 from configs.train_cfg import default_cfg
@@ -38,5 +37,5 @@ else:
         augment_data=False
     )
 
-    check_dataset(train_dataset)
-    check_dataset(valid_dataset)
+    check_dataset(train_dataset, log_errors=False, try_main_fn=False)
+    check_dataset(valid_dataset, log_errors=False, try_main_fn=False)
