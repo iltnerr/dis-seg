@@ -19,14 +19,10 @@ CLASS_COLORS = color_palette() # Keep the fixed color palette for now.
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
-def initialize(input_dir, out_dir, logfile, use_sam_hq=True):
+def initialize(input_dir, out_dir, use_sam_hq=True):
     # mirror input_dir structure to out_dir
     for directory in os.listdir(input_dir):
         os.makedirs(out_dir+'masks/'+directory, exist_ok=True)
-
-    # log file for images without any detections
-    if os.path.exists(out_dir+logfile):
-        raise FileExistsError("Log file already exists. Create a new one for this session.")
 
     # initialize models and annotators
     grounding_dino_model = Model(model_config_path=gsam_paths['gdino_config'], model_checkpoint_path=gsam_paths['gdino_ckpt'])

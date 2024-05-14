@@ -14,7 +14,7 @@ from utils.visualization import plot_compare_predictions
 
 
 cfg = default_cfg
-img_dir = common_paths['dataset_root'] + 'images/valid/'
+img_dir = common_paths['dataset_root'] + 'images/val/'
 anns = 'annotations-gsamhq'
 
 # Model

@@ -44,8 +44,7 @@ for batch, batch_aug in zip(train_dataloader, train_aug_dataloader):
     labels_augmented = batch_aug['labels'][0]
 
     image = pixel_values_to_pil_image(pixel_values)
-    image_augmented = pixel_values_to_pil_image(pixel_values_aug
-                                          )
+    image_augmented = pixel_values_to_pil_image(pixel_values_aug)
     visualize_augmentations(img=image, masks=labels, 
                             aug_image=image_augmented, aug_masks=labels_augmented, 
                             label2id={v: k for k, v in cls_dict.items()})

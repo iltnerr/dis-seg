@@ -16,11 +16,11 @@ class DisasterSegDataset(Dataset):
         self.augment_data = augment_data
         self.transform = self.augment()
 
-        sub_path = "train" if self.train else "valid"
+        sub_path = "train" if self.train else "val"
         self.img_dir = os.path.join(self.root_dir, "images", sub_path)
         self.ann_dir = os.path.join(self.root_dir, "annotations", sub_path)
 
-        # read images
+        # images
         image_file_names = []
 
         for root, dirs, files in os.walk(self.img_dir):
@@ -28,22 +28,20 @@ class DisasterSegDataset(Dataset):
 
         self.images = sorted(image_file_names)
 
-        # read annotations
-        annotation_file_names = []
+        # annotations
+        self.annotations = [fname.replace('.jpg', '_mask.png') for fname in self.images]
 
-        for root, dirs, files in os.walk(self.ann_dir):
-            annotation_file_names.extend(files)
-
-        self.annotations = sorted(annotation_file_names)
-
-        assert len(self.images) == len(self.annotations), "There must be as many images as there are segmentation maps"
+        # assertions
+        assert len(self.images) == len(self.annotations), "Number of images and annotations must be equal."
+        assert any('.jpeg' not in fname for fname in self.images), 'Input images should be of .jpg format.'
+        assert any(fname[:-4]+'_mask.png' in self.annotations for fname in self.images), 'There is no 1-to-1 correspondence between images and annotations.'
 
     def __len__(self):
         return len(self.images)
 
     def __getitem__(self, idx):
 
-        image = Image.open(os.path.join(self.img_dir, self.images[idx]))
+        image = Image.open(os.path.join(self.img_dir, self.images[idx])).convert('RGB')
         segmentation_map = Image.open(os.path.join(self.ann_dir, self.annotations[idx]))
 
         if self.augment_data:
