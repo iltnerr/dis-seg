@@ -94,6 +94,7 @@ def main():
                           "Val Dataset Size": len(valid_dataset),
                           "Augment Training Data": cfg['use_augmentation'],
                           "Batch Size": cfg['batch_size'],
+                          "Num Workers": num_cpus,
                           "Using Device": str(device),
                           "Max Epochs": cfg['max_epochs'],
                           "Learning Rate": cfg['lr'],

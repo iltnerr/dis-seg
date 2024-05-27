@@ -33,7 +33,7 @@ class DisasterSegDataset(Dataset):
 
         # assertions
         assert len(self.images) == len(self.annotations), "Number of images and annotations must be equal."
-        assert any('.jpeg' not in fname for fname in self.images), 'Input images should be of .jpg format.'
+        assert any(fname.endswith('.jpg') for fname in self.images), 'Input images should have .jpg format.'
         assert any(fname[:-4]+'_mask.png' in self.annotations for fname in self.images), 'There is no 1-to-1 correspondence between images and annotations.'
 
     def __len__(self):
