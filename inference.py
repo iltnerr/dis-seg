@@ -15,7 +15,7 @@ from utils.visualization import plot_compare_predictions
 
 cfg = default_cfg
 img_dir = common_paths['dataset_root'] + 'images/val/'
-anns = 'annotations-gsamhq'
+anns = 'annotations'
 
 # Model
 label2id = {v: k for k, v in cls_dict.items()}
@@ -23,6 +23,7 @@ preprocessor = SegformerImageProcessor()
 
 model = load_segformer(config_path=common_paths['segformer_config_path'], id2label=cls_dict, label2id=label2id)
 checkpoint = torch.load(common_paths[cfg['checkpoint']], map_location='cpu')
+print(f"Using Checkpoint: {common_paths[cfg['checkpoint']]}")
 model.load_state_dict(checkpoint['model_state_dict'], strict=True)
 device = torch.device('cuda' if torch.cuda.is_available() and not cfg['is_office'] else 'cpu')
 model.to(device) 

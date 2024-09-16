@@ -15,14 +15,8 @@ def initialize_session(local_dir, session_id):
         os.makedirs(directory, exist_ok=True)
     print("=================\n\n")
     
-    log_metrics(epoch=0,
-                train_accuracy=None,
-                train_loss=None, 
-                train_miou=None, 
-                val_accuracy=None, 
-                val_loss=None, 
-                val_miou=None,
-                logs_path=log_dir + "/logs.csv")
+    init_stats = {k: 0 for k in ['epoch', 'lr', 'train_loss', 'train_miou', 'val_loss', 'val_miou']}
+    log_metrics(init_stats, logs_path=log_dir + "/logs.csv")
 
 def save_checkpoint(epoch, model_state_dict, optimizer_state_dict, checkpoint_path):   
     torch.save({
@@ -32,17 +26,17 @@ def save_checkpoint(epoch, model_state_dict, optimizer_state_dict, checkpoint_pa
         }, 
         checkpoint_path)
 
-def log_metrics(epoch, train_accuracy, train_loss, train_miou, val_accuracy, val_loss, val_miou, logs_path):
-    header = ['Epoch', 'Train Acc', 'Train Loss', 'Train MIoU', 'Val Acc', 'Val Loss', 'Val MIoU']
+def log_metrics(stats, logs_path):
+    header = stats.keys()
 
     # Append metrics for the current epoch
     with open(logs_path, mode='a', newline='') as file:
         writer = csv.writer(file)
 
-        if epoch == 0:
+        if stats['epoch'] == 0:
             writer.writerow(header)
         else:
-            writer.writerow([epoch, train_accuracy, train_loss, train_miou, val_accuracy, val_loss, val_miou])
+            writer.writerow(stats.values())
 
 def log_train_config(log_dir, cfg):
     content = [f"{k}: {v}" for k, v in cfg.items()]
@@ -60,7 +54,7 @@ def delete_old_checkpoint(type, checkpoint_dir):
     
     # Reduce filenames to number of epoch so that the old checkpoint can be identified
     epochs = [file.split("epoch-")[1] for file in relevant]
-    epochs = [int(file.split("__acc")[0]) for file in epochs]
+    epochs = [int(file.split("__miou")[0]) for file in epochs]
 
     if len(epochs) > 1:
         # Remove old checkpoint

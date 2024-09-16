@@ -1,8 +1,10 @@
-import numpy as np
 import cv2
-import pandas as pd
-from cycler import cycler
 import matplotlib.pyplot as plt
+import numpy as np
+import os
+import pandas as pd
+
+from cycler import cycler
 from matplotlib.patches import Patch
 
 
@@ -10,7 +12,7 @@ def color_palette():
     """
     Color palette that maps each class to BGR values.
     
-    TODO: uniform distribution in color space depending on cls_dict:
+    TODO: uniform color distribution depending on cls_dict:
     CLASSES = list(cls_dict.values())
     palette = sns.color_palette("husl", len(CLASSES))
     colors_rgb = [(r, g, b) for r, g, b in palette]
@@ -31,6 +33,7 @@ def color_palette():
         [0, 128, 128],  # Tree (TEAL)
         [0, 0, 128]     # Person (NAVY)
     ]
+
 
 def plot_compare_predictions(img, preds, label2id, gt_map=None, alpha_img=0.5):
 
@@ -85,7 +88,8 @@ def plot_compare_predictions(img, preds, label2id, gt_map=None, alpha_img=0.5):
     axes[4].axis('off')
     plt.show()    
 
-def plot_curves(log_dir, log_file):
+
+def plot_curves(log_dir, log_file, save_fig=True):
     colors = cycler('color', ['#EE6666', '#3388BB', '#9988DD', '#EECC55', '#88BB44', '#FFBBBB'])
 
     # Settings
@@ -98,37 +102,47 @@ def plot_curves(log_dir, log_file):
     plt.rc('legend', fontsize=SMALL_SIZE)
     plt.rc('lines', linewidth=2)
     plt.rcParams['axes.linewidth'] = 0.1    
-    plt.rc('axes', facecolor='#E6E6E6', edgecolor='#000000',
-           axisbelow=True, grid=True, prop_cycle=colors)
+    plt.rc('axes', facecolor='#E6E6E6', edgecolor='#000000', axisbelow=True, grid=True, prop_cycle=colors)
     plt.rc('grid', color='w', linestyle='solid')
     plt.rc('patch', edgecolor='#E6E6E6')
 
     # Get data
-    df = pd.read_csv(log_dir+log_file, index_col="Epoch")
-    df_loss = df[[col for col in df.columns if "Loss" in col]]
-    df_acc = df[[col for col in df.columns if "Acc" in col]]
-    df_miou = df[[col for col in df.columns if "IoU" in col]]
-    df_list = [df_loss, df_acc, df_miou]
+    df = pd.read_csv(os.path.join(log_dir, log_file), index_col="epoch")
+    df_miou = df[[col for col in df.columns if "miou" in col]]
+    df_lr = df[[col for col in df.columns if "lr" in col]]
+    df_loss = df[[col for col in df.columns if "loss" in col]]
+    df_list = [df_miou, df_lr, df_loss]
 
-    cfg_axes = {0: {"ylabel": "Loss", "ylimits": None},
-                1: {"ylabel": "Pixelwise Acc.", "ylimits": [0, 1]},
-                2: {"ylabel": "MIoU", "ylimits": [0, 1]}
+    cfg_axes = {
+        0: {"ylabel": "MIoU", "ylimits": [0, 1]},
+        1: {"ylabel": "LR", "ylimits": [0, df_lr['lr'].max() * 1.1]},
+        2: {"ylabel": "Loss", "ylimits": None}
     }
 
     # Plots
     fig, axes = plt.subplots(3)
     fig.suptitle("Learning Curves")
+    plt.xlabel("Epoch")
+    plt.subplots_adjust(hspace=0.5) 
 
     for idx in range(0, 3):
         df_list[idx].plot(ax=axes[idx])
-        axes[idx].legend()
+        axes[idx].get_legend().remove()
         axes[idx].set_ylabel(cfg_axes[idx]["ylabel"])
         axes[idx].set_ylim(cfg_axes[idx]["ylimits"])
         axes[idx].set_xlabel("")
 
-    plt.xlabel("Epoch")
-    plt.subplots_adjust(hspace=0.5)   
-    plt.savefig(log_dir + "/learning_curves.pdf")
+    # Specifics 
+    axes[0].legend(['Train', 'Val'])
+    axes[1].get_lines()[0].set_color("black")
+    axes[1].ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+    axes[2].legend(['Train', 'Val'])
+
+    if save_fig:
+        plt.savefig(log_dir + "/learning_curves.pdf")
+    else:
+        plt.show()
+
 
 def plot_compare_annotations(img, masks_manual, masks_gsam, label2id, alpha_img=0.5, save_path=None):
     """
@@ -194,6 +208,7 @@ def plot_compare_annotations(img, masks_manual, masks_gsam, label2id, alpha_img=
 
     plt.close()
 
+
 def visualize_augmentations(img, masks, aug_image, aug_masks, label2id, alpha_img=0.5):
 
     # Colorize segmentations   
@@ -254,6 +269,7 @@ def visualize_augmentations(img, masks, aug_image, aug_masks, label2id, alpha_im
     axes[6].legend(handles=legend_elements, ncol=4, loc='center', bbox_to_anchor=(0.5, 0.5))
     axes[6].axis('off')
     plt.show()
+    
 
 def create_legend(label2id, palette):
     return [Patch(facecolor=(color[::-1] / 255), label=cls_name) for [cls_name, color] in zip(label2id.keys(), palette)]

@@ -1,6 +1,6 @@
 import torch
 
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 from torchmetrics import JaccardIndex, Accuracy
 from tqdm import tqdm
 from transformers import SegformerImageProcessor
@@ -24,13 +24,19 @@ valid_dataset = DisasterSegDataset(
     augment_data=False
 )
 
+"""
+if cfg['is_office']:
+    valid_dataset = Subset(valid_dataset, torch.arange(0,600))
+"""
 valid_dataloader = DataLoader(valid_dataset, batch_size=cfg['batch_size'])
+
 pbar = tqdm(valid_dataloader,
             bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]")
 
 # Model
 model = load_segformer(config_path=common_paths['segformer_config_path'], id2label=cls_dict, label2id={v: k for k, v in cls_dict.items()})
 checkpoint = torch.load(common_paths[cfg['checkpoint']], map_location='cpu')
+print(f"Using Checkpoint: {common_paths[cfg['checkpoint']]}")
 model.load_state_dict(checkpoint['model_state_dict'])
 device = torch.device('cuda' if torch.cuda.is_available() and not cfg['is_office'] else 'cpu')
 model.to(device)
